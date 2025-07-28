@@ -46,19 +46,19 @@ export default function Main() {
         boxSizing: 'border-box'
       }}>
         <h1 style={{
-          fontSize: 'clamp(48px, 10vw, 80px)',
+          fontSize: 'clamp(40px, 10vw, 72px)',
           marginBottom: 'clamp(30px, 6vw, 60px)',
           textAlign: 'center',
           color: '#3498db',
-          fontWeight: '900',
-          letterSpacing: '6px',
+          textShadow: '0 0 15px #3498db, 0 0 30px #3498db',
+          fontWeight: 'bold',
+          letterSpacing: '4px',
           textTransform: 'uppercase',
-          textShadow: '0 0 15px rgba(52, 152, 219, 0.3)',
           fontFamily: 'Montserrat, Arial, sans-serif',
           position: 'relative',
           top: '-10px'
         }}>
-          ПАЛОЧКИ
+          Палочки
         </h1>
 
         {/* Режимы */}
@@ -132,14 +132,10 @@ export default function Main() {
               borderRadius: '12px',
               cursor: 'pointer',
               width: '100%',
-              textAlign: 'center',
+              textAlign: 'left',
               boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
               gridColumn: '1 / -1',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center'
+              transition: 'all 0.3s ease'
             }}
             onMouseOver={e => {
               e.currentTarget.style.transform = 'scale(1.03)';
@@ -150,13 +146,8 @@ export default function Main() {
               e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
             }}
           >
-            <span style={{ 
-              display: 'block', 
-              pointerEvents: 'none',
-              textAlign: 'center',
-              width: '100%'
-            }}>
-              Особый
+            <span style={{ display: 'block', pointerEvents: 'none' }}>
+              Особое
             </span>
             <span style={{
               display: 'block',
@@ -164,9 +155,7 @@ export default function Main() {
               opacity: 0.9,
               marginTop: '6px',
               fontWeight: 'normal',
-              pointerEvents: 'none',
-              textAlign: 'center',
-              width: '100%'
+              pointerEvents: 'none'
             }}>
               1, 2 любые или 3 подряд
             </span>

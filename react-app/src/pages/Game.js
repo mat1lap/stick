@@ -68,30 +68,22 @@ export default function Game() {
   const [hoveredStick, setHoveredStick] = useState(null);
   const [moveHistory, setMoveHistory] = useState([]);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(-1);
-  
-  // Создаем ref для отслеживания текущего состояния звука
-  const isSoundOnRef = useRef(isSoundOn);
 
   const pickSound = useStickPickSound();
   const placeSound = useStickPlaceSound();
   const winSound = useWinSound();
   const loseSound = useLoseSound();
 
-  // Обновляем ref при изменении состояния звука
-  useEffect(() => {
-    isSoundOnRef.current = isSoundOn;
-  }, [isSoundOn]);
-
-  // Используем ref вместо состояния для проверки в playSound
+  // Добавлена зависимость от isSoundOn в useCallback
   const playSound = useCallback((sound) => {
-    if (isSoundOnRef.current) {
+    if (isSoundOn) {
       try {
         sound();
       } catch (e) {
         console.error("Error playing sound:", e);
       }
     }
-  }, []);
+  }, [isSoundOn]);
 
   const sticksRef = useRef(sticks);
   const isPlayerTurnRef = useRef(isPlayerTurn);
@@ -119,21 +111,17 @@ export default function Game() {
     return true;
   }, [sticks, mode, a]);
 
-  // Анимация появления палочек - убрали playSound из зависимостей
+  // Анимация появления палочек
   useEffect(() => {
     const timer = setTimeout(() => {
       setSticks(Array(n).fill(true));
       setGameStarted(true);
       setIsPlayerTurn(first === 'player');
-      
-      // Используем isSoundOnRef вместо состояния
-      if (isSoundOnRef.current) {
-        placeSound();
-      }
+      playSound(placeSound);
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [n, first, placeSound]);
+  }, [n, first, playSound, placeSound]);
 
   // Подсказка
   useEffect(() => {
@@ -244,6 +232,7 @@ export default function Game() {
     setSelected(new Set()); // Снимаем все выделения
     setIsPlayerTurn(previousState.isPlayerTurn);
     setCurrentMoveIndex(prev => prev - 1);
+    playSound(placeSound);
   };
 
   const resetGame = () => {
@@ -255,11 +244,7 @@ export default function Game() {
     setGameResult(null);
     setMoveHistory([]);
     setCurrentMoveIndex(-1);
-    
-    // Используем isSoundOnRef вместо состояния
-    if (isSoundOnRef.current) {
-      placeSound();
-    }
+    playSound(placeSound);
   };
 
   // Постоянная ширина палочек
@@ -268,15 +253,6 @@ export default function Game() {
 
   // Проверка валидности текущего выбора
   const isValidSelection = isValidMove(Array.from(selected), sticks, mode, k, a, b);
-
-  // Названия режимов
-  const modeNames = {
-    1: "Стандартный",
-    2: "Интервальный выбор",
-    3: "Подряд",
-    4: "Подряд и интервально",
-    5: "Особый"
-  };
 
   return (
     <div style={{
@@ -326,7 +302,7 @@ export default function Game() {
         borderRadius: '8px',
         zIndex: 10
       }}>
-        <p style={{ margin: '5px 0' }}><strong>Режим:</strong> {modeNames[mode]}</p>
+        <p style={{ margin: '5px 0' }}><strong>Режим:</strong> {mode}</p>
         <p style={{ margin: '5px 0' }}><strong>n:</strong> {n}</p>
         {(mode === 1 || mode === 3) && <p style={{ margin: '5px 0' }}><strong>k:</strong> {k}</p>}
         {(mode === 2 || mode === 4) && (
@@ -344,11 +320,10 @@ export default function Game() {
         zIndex: 1,
         textAlign: 'center',
         marginBottom: '20px',
-        // Увеличен отступ сверху, чтобы избежать наложения с надписью о результате
-        marginTop: gameResult ? '120px' : '0'
+        marginTop: gameResult ? '80px' : '0'
       }}>
-        <h2 style={{ marginBottom: '10px' }}>{modeNames[mode]}</h2>
-        <p style={{ fontSize: '18px' }}>Осталось палочек: {remaining}</p>
+        <h2 style={{ marginBottom: '10px' }}>Режим {mode}</h2>
+        <p style={{ fontSize: '18px' }}>Осталось: {remaining} палочек</p>
       </div>
 
       {/* Палочки */}
@@ -397,7 +372,7 @@ export default function Game() {
         zIndex: 10
       }}>
         {/* Кнопки управления */}
-        {!gameResult && (
+        {!gameResult && isPlayerTurn && !isGameOver && canCurrentPlayerMove() && (
           <div style={{ 
             marginBottom: '20px',
             minHeight: '70px' // фиксированная высота, чтобы кнопки не съезжали
@@ -406,16 +381,11 @@ export default function Game() {
               marginBottom: '10px',
               minHeight: '20px' // фиксированная высота для текста
             }}>
-              {isPlayerTurn && canCurrentPlayerMove() 
-                ? `Выбрано палочек: ${selected.size}` 
-                : isPlayerTurn && !canCurrentPlayerMove()
-                  ? "Нет допустимых ходов"
-                  : "Ходит компьютер..."
-              }
+              Выбрано: {selected.size} палочка(и)
             </p>
             <button
-              onClick={isPlayerTurn && canCurrentPlayerMove() ? confirmMove : undefined}
-              disabled={!isPlayerTurn || !canCurrentPlayerMove() || !isValidSelection}
+              onClick={confirmMove}
+              disabled={!isValidSelection}
               style={{
                 padding: '12px 24px',
                 fontSize: '16px',
@@ -423,24 +393,24 @@ export default function Game() {
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
-                cursor: !isPlayerTurn || !canCurrentPlayerMove() || !isValidSelection ? 'not-allowed' : 'pointer',
+                cursor: !isValidSelection ? 'not-allowed' : 'pointer',
                 fontWeight: 'bold',
                 width: '100%',
                 transition: 'all 0.3s ease',
                 boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}
               onMouseOver={e => {
-                if (!isPlayerTurn || !canCurrentPlayerMove() || !isValidSelection) return;
+                if (!isValidSelection) return;
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 6px 8px rgba(0,0,0,0.15)';
               }}
               onMouseOut={e => {
-                if (!isPlayerTurn || !canCurrentPlayerMove() || !isValidSelection) return;
+                if (!isValidSelection) return;
                 e.target.style.transform = 'translateY(0)';
                 e.target.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
               }}
             >
-              {isPlayerTurn && canCurrentPlayerMove() ? "Подтвердить ход" : "Ход компьютера"}
+              Подтвердить ход
             </button>
           </div>
         )}
@@ -587,8 +557,7 @@ export default function Game() {
           onClick={() => navigate('/')}
           style={{
             padding: '10px 20px',
-            fontSize: '18px',
-            fontWeight: 'bold',
+            fontSize: '14px',
             backgroundColor: '#95a5a6',
             color: 'white',
             border: 'none',
