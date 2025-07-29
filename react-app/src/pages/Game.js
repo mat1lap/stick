@@ -345,7 +345,7 @@ export default function Game() {
         textAlign: 'center',
         marginBottom: '20px',
         // Увеличен отступ сверху, чтобы избежать наложения с надписью о результате
-        marginTop: gameResult ? '120px' : '0'
+        marginTop: gameResult ? '120px' : '50px'
       }}>
         <h2 style={{ marginBottom: '10px' }}>{modeNames[mode]}</h2>
         <p style={{ fontSize: '18px' }}>Осталось палочек: {remaining}</p>
