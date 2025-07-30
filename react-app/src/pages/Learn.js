@@ -8,7 +8,6 @@ export default function Learn() {
       padding: '40px 20px',
       minHeight: '100vh',
       textAlign: 'center',
-      backgroundImage: 'url(/bg/table.jpg)',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       color: 'white',

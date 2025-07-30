@@ -2,11 +2,9 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Main() {
   const navigate = useNavigate();
-
   const selectMode = (modeId) => {
     navigate('/setup', { state: { mode: modeId } });
   };
-
   const showLearn = () => {
     navigate('/learn');
   };
@@ -18,7 +16,6 @@ export default function Main() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundImage: 'url(/bg/table.jpg)',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       color: 'white',
@@ -26,19 +23,7 @@ export default function Main() {
       textShadow: '1px 1px 5px rgba(0,0,0,0.8)',
       position: 'relative'
     }}>
-      {/* Градиентный фон */}
       <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%)',
-        zIndex: 1
-      }} />
-      
-      <div style={{
-        zIndex: 2,
         width: '100%',
         maxWidth: '600px',
         margin: '0 auto',
@@ -61,7 +46,6 @@ export default function Main() {
           ПАЛОЧКИ
         </h1>
 
-        {/* Режимы */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
@@ -118,7 +102,6 @@ export default function Main() {
             </button>
           ))}
           
-          {/* Особый режим - растянут по ширине */}
           <button
             key={5}
             onClick={() => selectMode(5)}
@@ -173,7 +156,6 @@ export default function Main() {
           </button>
         </div>
 
-        {/* Единая кнопка "Как играть" */}
         <button
           onClick={showLearn}
           style={{

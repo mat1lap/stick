@@ -13,21 +13,15 @@ export default function Setup() {
   const [a, setA] = useState(2);
   const [b, setB] = useState(4);
   const [first, setFirst] = useState('player');
-  const [errors, setErrors] = useState({});
 
-  // Основной эффект для синхронизации значений и валидации
   useEffect(() => {
-    let newErrors = {};
     let hasChanges = false;
-    
-    // Корректировка значений
+
     const correctedN = Math.min(Math.max(n, 5), 50);
     if (correctedN !== n) {
       setN(correctedN);
       hasChanges = true;
     }
-    
-    // Для режимов 1 и 3
     if (mode === 1 || mode === 3) {
       const correctedK = Math.min(Math.max(k, 1), correctedN);
       if (correctedK !== k) {
@@ -35,17 +29,12 @@ export default function Setup() {
         hasChanges = true;
       }
     }
-    
-    // Для режимов 2 и 4
     if (mode === 2 || mode === 4) {
-      // Сначала корректируем a
       const correctedA = Math.min(Math.max(a, 2), correctedN);
       if (correctedA !== a) {
         setA(correctedA);
         hasChanges = true;
       }
-      
-      // Теперь корректируем b с учетом исправленного a
       let correctedB = Math.min(Math.max(b, correctedA), correctedN);
       if (correctedB !== b) {
         setB(correctedB);
@@ -53,56 +42,17 @@ export default function Setup() {
       }
     }
     
-    // Если были изменения, пропускаем валидацию и ждем следующего рендера
     if (hasChanges) return;
-    
-    // Валидация после всех корректировок
-    if (correctedN < 5 || correctedN > 50) newErrors.n = `n: от 5 до 50`;
-    
-    if (mode === 1 || mode === 3) {
-      if (k < 1 || k > correctedN) newErrors.k = `k: от 1 до ${correctedN}`;
-    }
-    
-    if (mode === 2 || mode === 4) {
-      if (a < 2 || a > b) newErrors.a = `a: от 2 до b`;
-      if (b < a || b > correctedN) newErrors.b = `b: от a до ${correctedN}`;
-    }
-    
-    setErrors(newErrors);
   }, [n, k, a, b, mode]);
 
   const handleSubmit = () => {
-    // Проверка перед отправкой
-    let newErrors = {};
-    const correctedN = Math.min(Math.max(n, 5), 50);
-    
-    if (correctedN < 5 || correctedN > 50) newErrors.n = `n: от 5 до 50`;
-    
-    if (mode === 1 || mode === 3) {
-      const correctedK = Math.min(Math.max(k, 1), correctedN);
-      if (correctedK < 1 || correctedK > correctedN) newErrors.k = `k: от 1 до ${correctedN}`;
-    }
-    
+    const settings = { mode, n, first };
+    if (mode === 1 || mode === 3) settings.k = k;
     if (mode === 2 || mode === 4) {
-      const correctedA = Math.min(Math.max(a, 2), correctedN);
-      const correctedB = Math.min(Math.max(b, correctedA), correctedN);
-      
-      if (correctedA < 2 || correctedA > correctedB) newErrors.a = `a: от 2 до b`;
-      if (correctedB < correctedA || correctedB > correctedN) newErrors.b = `b: от a до ${correctedN}`;
+      settings.a = a;
+      settings.b = b;
     }
-    
-    setErrors(newErrors);
-    
-    if (Object.keys(newErrors).length === 0) {
-      const settings = { mode, n: correctedN, first };
-      if (mode === 1 || mode === 3) settings.k = Math.min(Math.max(k, 1), correctedN);
-      if (mode === 2 || mode === 4) {
-        settings.a = Math.min(Math.max(a, 2), correctedN);
-        settings.b = Math.min(Math.max(b, settings.a), correctedN);
-      }
-      
-      navigate('/game', { state: settings });
-    }
+    navigate('/game', { state: settings });
   };
 
   return (
@@ -197,7 +147,6 @@ export default function Setup() {
               <span>5</span>
               <span>50</span>
             </div>
-            {errors.n && <p style={errorStyle}>{errors.n}</p>}
           </div>
         </div>
 
@@ -247,7 +196,6 @@ export default function Setup() {
                 <span>1</span>
                 <span>{n}</span>
               </div>
-              {errors.k && <p style={errorStyle}>{errors.k}</p>}
             </div>
           </div>
         )}
@@ -283,7 +231,6 @@ export default function Setup() {
                     setA(newA);
                     setB(newB);
                   } else {
-                    // Если a > b, устанавливаем b = a
                     setA(newB);
                     setB(newB);
                   }
@@ -308,13 +255,10 @@ export default function Setup() {
                 <span>2</span>
                 <span>{n}</span>
               </div>
-              {errors.a && <p style={errorStyle}>{errors.a}</p>}
-              {errors.b && <p style={errorStyle}>{errors.b}</p>}
             </div>
           </div>
         )}
 
-        {/* Компактный дизайн для выбора первого игрока */}
         <div style={{ 
           backgroundColor: 'rgba(255,255,255,0.1)', 
           padding: '12px', 
@@ -396,7 +340,6 @@ export default function Setup() {
           </div>
         </div>
         
-        {/* Кнопка "Назад" */}
         <button
           onClick={() => navigate(-1)}
           style={{
@@ -455,15 +398,3 @@ export default function Setup() {
     </div>
   );
 }
-
-const fieldStyle = {
-  margin: '25px 0 10px 0',
-  textAlign: 'left'
-};
-
-const errorStyle = {
-  color: '#e74c3c',
-  fontSize: '13px',
-  marginTop: '6px',
-  textAlign: 'left'
-};
