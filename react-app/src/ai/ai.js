@@ -119,83 +119,32 @@ function getMoveConsecutive(sticks, a, b) {
   return [];
 }
 
-// Глобальный мемо-кэш
 let mem = new Map();
+let memLoaded = false;
+let memLoadPromise = null;
 
-// Проверяем, работаем ли мы в Electron
-const isElectron = (() => {
-  try {
-    if (typeof window !== 'undefined' && window.process && window.process.type) {
-      return true;
-    }
-  } catch (e) {
-    // Не в Electron
-  }
-  return false;
-})();
+async function loadMem() {
+  if (memLoaded) return;
 
-// Функция для загрузки мемоизированных значений
-function loadMem() {
-  try {
-    if (isElectron) {
-      // В Electron используем fs через require
-      const fs = require('fs');
-      const path = require('path');
-      const memPath = path.join(__dirname, 'mem.txt');
-      
-      if (fs.existsSync(memPath)) {
-        const data = fs.readFileSync(memPath, 'utf8');
-        const entries = JSON.parse(data);
-        mem.clear();
-        for (const [key, value] of Object.entries(entries)) {
-          mem.set(key, value);
-        }
-        console.log(`Загружено ${mem.size} мемоизированных значений`);
-      }
-    } else {
-      // В браузере используем localStorage
-      const data = localStorage.getItem('grundyMem');
-      if (data) {
-        const entries = JSON.parse(data);
-        mem.clear();
-        for (const [key, value] of Object.entries(entries)) {
-          mem.set(key, value);
-        }
-        console.log(`Загружено ${mem.size} мемоизированных значений`);
-      }
-    }
-  } catch (error) {
-    console.error('Ошибка при загрузке мемоизированных значений:', error);
+  const response = await fetch('mem.json');
+  const data = await response.json();
+  
+  mem.clear();
+  for (const [key, value] of Object.entries(data)) {
+    mem.set(key, value);
   }
+  memLoaded = true;
 }
 
-// Функция для сохранения мемоизированных значений
-function saveMem() {
-  try {
-    const entries = {};
-    for (const [key, value] of mem) {
-      entries[key] = value;
-    }
-    
-    if (isElectron) {
-      const fs = require('fs');
-      const path = require('path');
-      const memPath = path.join(__dirname, 'mem.txt');
-      fs.writeFileSync(memPath, JSON.stringify(entries), 'utf8');
-      console.log(`Сохранено ${mem.size} мемоизированных значений в mem.txt`);
-    } else {
-      localStorage.setItem('grundyMem', JSON.stringify(entries));
-      console.log(`Сохранено ${mem.size} мемоизированных значений в localStorage`);
-    }
-  } catch (error) {
-    console.error('Ошибка при сохранении мемоизированных значений:', error);
-  }
-}
-
-// Инициализируем мемоизацию при загрузке модуля
-loadMem();
+memLoadPromise = loadMem();
 
 function getGrundySpecial(lens) {
+  if (!memLoaded) {
+    if (!memLoadPromise) {
+      memLoadPromise = loadMem();
+    }
+  }
+  
   const key = JSON.stringify(lens.slice().sort((x, y) => x - y));
   if (mem.has(key)) return mem.get(key);
   if (lens.length === 0) return mem.set(key, 0).get(key);
@@ -356,14 +305,6 @@ function getMoveSpecial(sticks) {
   if (segments.length > 0) return [segments[0].start];
   return [];
 }
-
-// Сохраняем мемоизированные значения после каждого вызова getMoveSpecial
-const originalGetMoveSpecial = getMoveSpecial;
-getMoveSpecial = function(sticks) {
-  const result = originalGetMoveSpecial(sticks);
-  saveMem();
-  return result;
-};
 
 export function getOptimalMove(mode, sticks, a = 0, b = 0, k = 0) {
   switch (mode) {
