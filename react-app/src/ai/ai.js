@@ -1,18 +1,20 @@
-// src/ai/ai.js
-// Оптимальные ходы, переписано с C++ code.txt
+//converted from ai.cpp
 
-// --- Вспомогательная функция: разбиение на сегменты ---
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 export function getSegments(sticks) {
   const segments = [];
-  let i = 0;
   const n = sticks.length;
-
+  let i = 0;
   while (i < n) {
     if (sticks[i]) {
       const start = i;
-      while (i < n && sticks[i]) i++;
-      const len = i - start;
-      segments.push({ start, len });
+      while (i < n && sticks[i]) {
+        i++;
+      }
+      segments.push({ start, len: i - start });
     } else {
       i++;
     }
@@ -20,394 +22,356 @@ export function getSegments(sticks) {
   return segments;
 }
 
-// --- Режим 1: 1..k любых палочек ---
-export function getMoveMode1(sticks, k) {
-  const count = sticks.filter(s => s).length;
-  const dp = Array(count + 1).fill(false);
-
-  for (let i = 1; i <= count; i++) {
-    for (let t = 1; t <= Math.min(k, i); t++) {
-      if (!dp[i - t]) {
-        dp[i] = true;
-        break;
-      }
-    }
-  }
-
-  let take = -1;
-  for (let t = 1; t <= Math.min(k, count); t++) {
-    if (count - t >= 0 && !dp[count - t]) {
-      take = t;
-      break;
-    }
-  }
-
-  if (take === -1 || take === 0) {
-    take = Math.min(k, count);
-  }
-  if (take === 0) return [];
-
-  const indices = [];
-  for (let i = 0; i < sticks.length && indices.length < take; i++) {
-    if (sticks[i]) indices.push(i);
-  }
-  return indices;
-}
-
-// --- Режим 2: a..b любых палочек ---
-export function getMoveMode2(sticks, a, b) {
-  const count = sticks.filter(s => s).length;
-  const dp = Array(count + 1).fill(false);
-
-  for (let i = 1; i <= count; i++) {
-    const lowT = Math.max(1, a);
-    const highT = Math.min(b, i);
-    if (lowT > highT) continue;
-
-    for (let t = lowT; t <= highT; t++) {
-      if (!dp[i - t]) {
-        dp[i] = true;
-        break;
-      }
-    }
-  }
-
-  let take = -1;
-  for (let t = Math.max(a, 1); t <= Math.min(b, count); t++) {
-    if (count - t >= 0 && !dp[count - t]) {
-      take = t;
-      break;
-    }
-  }
-
-  if (take === -1) {
-    take = Math.min(b, count);
-    if (take < a && count > 0) take = Math.min(b, count);
-  }
-  if (take === 0) return [];
-
-  const indices = [];
-  for (let i = 0; i < sticks.length && indices.length < take; i++) {
-    if (sticks[i]) indices.push(i);
-  }
-  return indices;
-}
-
-// --- Режим 3: 1..k подряд идущих ---
-const memoGrundy3 = new Map();
-
-export function getMoveMode3(sticks, k) {
-  const segments = getSegments(sticks);
-  const maxLen = sticks.length;
-  const g = Array(maxLen + 1).fill(0);
-
-  // Предварительный расчёт Grundy-чисел
-  for (let len = 1; len <= maxLen; len++) {
-    const mexSet = new Set();
-    for (let take = 1; take <= Math.min(k, len); take++) {
-      for (let pos = 0; pos <= len - take; pos++) {
-        const leftLen = pos;
-        const rightLen = len - take - pos;
-        const val = g[leftLen] ^ g[rightLen];
-        mexSet.add(val);
-      }
-    }
-    let mex = 0;
-    while (mexSet.has(mex)) mex++;
-    g[len] = mex;
-  }
-
-  // Общее XOR всех сегментов
-  let total = 0;
-  for (const seg of segments) {
-    total ^= g[seg.len];
-  }
-
-  // Ищем выигрышный ход
-  for (const seg of segments) {
-    const len = seg.len;
-    for (let take = 1; take <= Math.min(k, len); take++) {
-      for (let pos = 0; pos <= len - take; pos++) {
-        const leftLen = pos;
-        const rightLen = len - take - pos;
-        const newVal = total ^ g[len] ^ g[leftLen] ^ g[rightLen];
-        if (newVal === 0) {
-          const move = [];
-          const startIdx = seg.start + pos;
-          for (let i = 0; i < take; i++) {
-            move.push(startIdx + i);
-          }
-          return move;
-        }
-      }
-    }
-  }
-
-  // Если нет выигрышного хода — делаем любой
-  if (segments.length > 0) {
-    const take = Math.min(k, segments[0].len);
-    const move = [];
-    for (let i = 0; i < take; i++) {
-      move.push(segments[0].start + i);
-    }
-    return move;
-  }
-
-  return [];
-}
-
-// --- Режим 4: a..b подряд идущих ---
-const memoGrundy4 = new Map();
-
-export function getMoveMode4(sticks, a, b) {
-  const segments = getSegments(sticks);
-  const maxLen = sticks.length;
-  const g = Array(maxLen + 1).fill(0);
-
-  for (let len = 1; len <= maxLen; len++) {
-    const mexSet = new Set();
-    const lowT = Math.max(1, a);
-    const highT = Math.min(b, len);
-    if (lowT > highT) continue;
-
-    for (let take = lowT; take <= highT; take++) {
-      for (let pos = 0; pos <= len - take; pos++) {
-        const leftLen = pos;
-        const rightLen = len - take - pos;
-        const val = g[leftLen] ^ g[rightLen];
-        mexSet.add(val);
-      }
-    }
-    let mex = 0;
-    while (mexSet.has(mex)) mex++;
-    g[len] = mex;
-  }
-
-  let total = 0;
-  for (const seg of segments) {
-    total ^= g[seg.len];
-  }
-
-  for (const seg of segments) {
-    const len = seg.len;
-    const lowT = Math.max(a, 1);
-    const highT = Math.min(b, len);
-    if (lowT > highT) continue;
-
-    for (let take = lowT; take <= highT; take++) {
-      for (let pos = 0; pos <= len - take; pos++) {
-        const leftLen = pos;
-        const rightLen = len - take - pos;
-        const newVal = total ^ g[len] ^ g[leftLen] ^ g[rightLen];
-        if (newVal === 0) {
-          const move = [];
-          const startIdx = seg.start + pos;
-          for (let i = 0; i < take; i++) {
-            move.push(startIdx + i);
-          }
-          return move;
-        }
-      }
-    }
-  }
-
-  // Если нет выигрышного хода — минимальный допустимый
-  for (const seg of segments) {
-    if (seg.len >= a) {
-      const take = Math.min(seg.len, a);
-      const move = [];
-      for (let i = 0; i < take; i++) {
-        move.push(seg.start + i);
-      }
-      return move;
-    }
-  }
-
-  return [];
-}
-
-// --- Режим 5: 1, 2 любые или 3 подряд ---
-const memoGrundy5 = new Map();
-
-function grundyMode5(state) {
-  // Сортируем для уникального ключа
-  const key = [...state].sort((a, b) => a - b).join(',');
-  if (memoGrundy5.has(key)) return memoGrundy5.get(key);
-
-  if (state.length === 0) {
-    memoGrundy5.set(key, 0);
-    return 0;
-  }
-
-  const nextStatesSet = new Set();
-
-  // 1. Одна палочка
-  for (let i = 0; i < state.length; i++) {
-    const seg = state[i];
-    for (let pos = 0; pos < seg; pos++) {
-      const newState = [...state];
-      newState.splice(i, 1);
-      if (pos > 0) newState.push(pos);
-      if (seg - pos - 1 > 0) newState.push(seg - pos - 1);
-      nextStatesSet.add([...newState].sort((a, b) => a - b).join(','));
-    }
-  }
-
-  // 2. Две любые в одном сегменте
-  for (let i = 0; i < state.length; i++) {
-    const seg = state[i];
-    if (seg < 2) continue;
-    for (let i1 = 0; i1 < seg; i1++) {
-      for (let i2 = i1 + 1; i2 < seg; i2++) {
-        const newState = [...state];
-        newState.splice(i, 1);
-        const a = i1;
-        const b = i2 - i1 - 1;
-        const c = seg - i2 - 1;
-        if (a > 0) newState.push(a);
-        if (b > 0) newState.push(b);
-        if (c > 0) newState.push(c);
-        nextStatesSet.add([...newState].sort((a, b) => a - b).join(','));
-      }
-    }
-  }
-
-  // 3. Две из разных сегментов
-  for (let i = 0; i < state.length; i++) {
-    for (let j = i + 1; j < state.length; j++) {
-      const s1 = state[i], s2 = state[j];
-      for (let p1 = 0; p1 < s1; p1++) {
-        for (let p2 = 0; p2 < s2; p2++) {
-          const newState = [...state];
-          newState.splice(j, 1);
-          newState.splice(i, 1);
-          if (p1 > 0) newState.push(p1);
-          if (s1 - p1 - 1 > 0) newState.push(s1 - p1 - 1);
-          if (p2 > 0) newState.push(p2);
-          if (s2 - p2 - 1 > 0) newState.push(s2 - p2 - 1);
-          nextStatesSet.add([...newState].sort((a, b) => a - b).join(','));
-        }
-      }
-    }
-  }
-
-  // 4. Три подряд
-  for (let i = 0; i < state.length; i++) {
-    const seg = state[i];
-    if (seg < 3) continue;
-    for (let pos = 0; pos <= seg - 3; pos++) {
-      const newState = [...state];
-      newState.splice(i, 1);
-      if (pos > 0) newState.push(pos);
-      if (seg - pos - 3 > 0) newState.push(seg - pos - 3);
-      nextStatesSet.add([...newState].sort((a, b) => a - b).join(','));
-    }
-  }
-
-  const nextG = new Set();
-  for (const nsKey of nextStatesSet) {
-    const ns = nsKey.split(',').map(Number);
-    nextG.add(grundyMode5(ns));
-  }
-
+function getMex(s) {
   let mex = 0;
-  while (nextG.has(mex)) mex++;
-  memoGrundy5.set(key, mex);
+  const arr = Array.from(s).sort((a, b) => a - b);
+  for (const v of arr) {
+    if (v !== mex) return mex;
+    mex++;
+  }
   return mex;
 }
 
-export function getMoveMode5(sticks) {
-  const segments = getSegments(sticks);
-  const state = segments.map(s => s.len);
+function getMoveAny(sticks, a, b) {
+  const len = sticks.length;
+  const n = sticks.filter(Boolean).length;
+  const dp = Array(n + 1).fill(false);
+  const loseMovePercentage = Array(n + 1).fill(0);
+  const bestMove = Array.from({ length: n + 1 }, () => []);
 
-  // 1. Одна любая
-  for (let idx = 0; idx < segments.length; idx++) {
-    const { start, len } = segments[idx];
-    for (let pos = 0; pos < len; pos++) {
-      const newState = [...state];
-      newState.splice(idx, 1);
-      if (pos > 0) newState.push(pos);
-      if (len - pos - 1 > 0) newState.push(len - pos - 1);
-      if (grundyMode5([...newState].sort((a, b) => a - b)) === 0) {
-        return [start + pos];
+  for (let i = 1; i <= n; i++) {
+    for (let j = a; j <= b && i - j >= 0; j++) {
+      if (!dp[i - j]) {
+        dp[i] = true;
+        loseMovePercentage[i]++;
+        bestMove[i].push(i - j);
       }
     }
+    const possible = Math.max(0, Math.min(b, i) - a + 1);
+    if (possible > 0) loseMovePercentage[i] /= possible;
   }
 
-  // 2. Две любые в одном сегменте
-  for (let idx = 0; idx < segments.length; idx++) {
-    const { start, len } = segments[idx];
-    if (len < 2) continue;
-    for (let i = 0; i < len; i++) {
-      for (let j = i + 1; j < len; j++) {
-        const newState = [...state];
-        newState.splice(idx, 1);
-        const a = i;
-        const b = j - i - 1;
-        const c = len - j - 1;
-        if (a > 0) newState.push(a);
-        if (b > 0) newState.push(b);
-        if (c > 0) newState.push(c);
-        if (grundyMode5([...newState].sort((a, b) => a - b)) === 0) {
-          return [start + i, start + j];
+  let newN;
+  if (bestMove[n].length === 0) {
+    newN = n - a;
+    for (let i = a + 1; i <= b; i++) {
+      if (loseMovePercentage[n - i] < loseMovePercentage[n - newN]) {
+        newN = n - i;
+      }
+    }
+  } else {
+    const opts = bestMove[n];
+    newN = opts[randomInt(0, opts.length - 1)];
+  }
+
+  const toRemove = [];
+  for (let i = 0; i < len && toRemove.length < n - newN; i++) {
+    if (sticks[i]) toRemove.push(i);
+  }
+  return toRemove;
+}
+
+function getMoveConsecutive(sticks, a, b) {
+  const n = sticks.filter(Boolean).length;
+  const grundy = Array(n + 1).fill(0);
+
+  for (let i = 1; i <= n; i++) {
+    const transitions = new Set();
+    for (let j = a; j <= b && i - j >= 0; j++) {
+      for (let pos = 0; pos + j <= i; pos++) {
+        const left = pos;
+        const right = i - pos - j;
+        transitions.add(grundy[left] ^ grundy[right]);
+      }
+    }
+    grundy[i] = getMex(transitions);
+  }
+
+  let total = 0;
+  const segments = getSegments(sticks);
+  segments.forEach(seg => { total ^= grundy[seg.len]; });
+
+  const bestMoves = [];
+  for (const seg of segments) {
+    const maxN = Math.min(b, seg.len);
+    if (a > maxN) continue;
+    for (let j = a; j <= maxN; j++) {
+      for (let pos = 0; pos + j <= seg.len; pos++) {
+        const left = pos;
+        const right = seg.len - j - pos;
+        if ((total ^ grundy[left] ^ grundy[right] ^ grundy[seg.len]) === 0) {
+          const mv = [];
+          for (let k = 0; k < j; k++) mv.push(seg.start + pos + k);
+          bestMoves.push(mv);
         }
       }
     }
   }
 
-  // 3. Две из разных сегментов
+  if (bestMoves.length > 0) {
+    return bestMoves[randomInt(0, bestMoves.length - 1)];
+  }
+  for (const seg of segments) {
+    if (seg.len >= a) {
+      return Array.from({ length: a }, (_, i) => seg.start + i);
+    }
+  }
+  return [];
+}
+
+// Глобальный мемо-кэш
+let mem = new Map();
+
+// Проверяем, работаем ли мы в Electron
+const isElectron = (() => {
+  try {
+    if (typeof window !== 'undefined' && window.process && window.process.type) {
+      return true;
+    }
+  } catch (e) {
+    // Не в Electron
+  }
+  return false;
+})();
+
+// Функция для загрузки мемоизированных значений
+function loadMem() {
+  try {
+    if (isElectron) {
+      // В Electron используем fs через require
+      const fs = require('fs');
+      const path = require('path');
+      const memPath = path.join(__dirname, 'mem.txt');
+      
+      if (fs.existsSync(memPath)) {
+        const data = fs.readFileSync(memPath, 'utf8');
+        const entries = JSON.parse(data);
+        mem.clear();
+        for (const [key, value] of Object.entries(entries)) {
+          mem.set(key, value);
+        }
+        console.log(`Загружено ${mem.size} мемоизированных значений`);
+      }
+    } else {
+      // В браузере используем localStorage
+      const data = localStorage.getItem('grundyMem');
+      if (data) {
+        const entries = JSON.parse(data);
+        mem.clear();
+        for (const [key, value] of Object.entries(entries)) {
+          mem.set(key, value);
+        }
+        console.log(`Загружено ${mem.size} мемоизированных значений`);
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке мемоизированных значений:', error);
+  }
+}
+
+// Функция для сохранения мемоизированных значений
+function saveMem() {
+  try {
+    const entries = {};
+    for (const [key, value] of mem) {
+      entries[key] = value;
+    }
+    
+    if (isElectron) {
+      const fs = require('fs');
+      const path = require('path');
+      const memPath = path.join(__dirname, 'mem.txt');
+      fs.writeFileSync(memPath, JSON.stringify(entries), 'utf8');
+      console.log(`Сохранено ${mem.size} мемоизированных значений в mem.txt`);
+    } else {
+      localStorage.setItem('grundyMem', JSON.stringify(entries));
+      console.log(`Сохранено ${mem.size} мемоизированных значений в localStorage`);
+    }
+  } catch (error) {
+    console.error('Ошибка при сохранении мемоизированных значений:', error);
+  }
+}
+
+// Инициализируем мемоизацию при загрузке модуля
+loadMem();
+
+function getGrundySpecial(lens) {
+  const key = JSON.stringify(lens.slice().sort((x, y) => x - y));
+  if (mem.has(key)) return mem.get(key);
+  if (lens.length === 0) return mem.set(key, 0).get(key);
+
+  const transitions = new Set();
+  const n = lens.length;
+
+  for (let i = 0; i < n; i++) {
+    const len = lens[i];
+    for (let pos = 0; pos < len; pos++) {
+      const trans = lens.slice();
+      trans.splice(i, 1);
+      const a = pos;
+      const b = len - pos - 1;
+      if (a) trans.push(a);
+      if (b) trans.push(b);
+      transitions.add(JSON.stringify(trans.sort((x, y) => x - y)));
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    const len = lens[i];
+    if (len < 2) continue;
+    for (let p1 = 0; p1 < len; p1++) {
+      for (let p2 = p1 + 1; p2 < len; p2++) {
+        const trans = lens.slice();
+        trans.splice(i, 1);
+        const a = p1;
+        const b = p2 - p1 - 1;
+        const c = len - p2 - 1;
+        if (a) trans.push(a);
+        if (b) trans.push(b);
+        if (c) trans.push(c);
+        transitions.add(JSON.stringify(trans.sort((x, y) => x - y)));
+      }
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const len1 = lens[i], len2 = lens[j];
+      for (let p1 = 0; p1 < len1; p1++) {
+        for (let p2 = 0; p2 < len2; p2++) {
+          const trans = lens.slice();
+          trans.splice(j, 1);
+          trans.splice(i, 1);
+          const a1 = p1;
+          const b1 = len1 - p1 - 1;
+          const a2 = p2;
+          const b2 = len2 - p2 - 1;
+          if (a1) trans.push(a1);
+          if (b1) trans.push(b1);
+          if (a2) trans.push(a2);
+          if (b2) trans.push(b2);
+          transitions.add(JSON.stringify(trans.sort((x, y) => x - y)));
+        }
+      }
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    const len = lens[i];
+    if (len < 3) continue;
+    for (let pos = 0; pos <= len - 3; pos++) {
+      const trans = lens.slice();
+      trans.splice(i, 1);
+      const left = pos;
+      const right = len - pos - 3;
+      if (left) trans.push(left);
+      if (right) trans.push(right);
+      transitions.add(JSON.stringify(trans.sort((x, y) => x - y)));
+    }
+  }
+
+  const mexSet = new Set();
+  for (const t of transitions) {
+    const arr = JSON.parse(t);
+    mexSet.add(getGrundySpecial(arr));
+  }
+  const result = getMex(mexSet);
+  mem.set(key, result);
+  return result;
+}
+
+function getMoveSpecial(sticks) {
+  const segments = getSegments(sticks);
+  const lens = segments.map(s => s.len);
+
+  for (let i = 0; i < segments.length; i++) {
+    const { start, len } = segments[i];
+    for (let pos = 0; pos < len; pos++) {
+      const trans = lens.slice();
+      trans.splice(i, 1);
+      const a = pos;
+      const b = len - pos - 1;
+      if (a) trans.push(a);
+      if (b) trans.push(b);
+      if (getGrundySpecial(trans) === 0) return [start + pos];
+    }
+  }
+
+  for (let i = 0; i < segments.length; i++) {
+    const { start, len } = segments[i];
+    if (len < 2) continue;
+    for (let p1 = 0; p1 < len; p1++) {
+      for (let p2 = p1 + 1; p2 < len; p2++) {
+        const trans = lens.slice();
+        trans.splice(i, 1);
+        const a = p1;
+        const b = p2 - p1 - 1;
+        const c = len - p2 - 1;
+        if (a) trans.push(a);
+        if (b) trans.push(b);
+        if (c) trans.push(c);
+        if (getGrundySpecial(trans) === 0) return [start + p1, start + p2];
+      }
+    }
+  }
+
   for (let i = 0; i < segments.length; i++) {
     for (let j = i + 1; j < segments.length; j++) {
       const { start: s1, len: l1 } = segments[i];
       const { start: s2, len: l2 } = segments[j];
       for (let p1 = 0; p1 < l1; p1++) {
         for (let p2 = 0; p2 < l2; p2++) {
-          const newState = [...state];
-          newState.splice(j, 1);
-          newState.splice(i, 1);
-          if (p1 > 0) newState.push(p1);
-          if (l1 - p1 - 1 > 0) newState.push(l1 - p1 - 1);
-          if (p2 > 0) newState.push(p2);
-          if (l2 - p2 - 1 > 0) newState.push(l2 - p2 - 1);
-          if (grundyMode5([...newState].sort((a, b) => a - b)) === 0) {
-            return [s1 + p1, s2 + p2];
-          }
+          const trans = lens.slice();
+          trans.splice(j, 1);
+          trans.splice(i, 1);
+          const a1 = p1;
+          const b1 = l1 - p1 - 1;
+          const a2 = p2;
+          const b2 = l2 - p2 - 1;
+          if (a1) trans.push(a1);
+          if (b1) trans.push(b1);
+          if (a2) trans.push(a2);
+          if (b2) trans.push(b2);
+          if (getGrundySpecial(trans) === 0) return [s1 + p1, s2 + p2];
         }
       }
     }
   }
 
-  // 4. Три подряд
-  for (let idx = 0; idx < segments.length; idx++) {
-    const { start, len } = segments[idx];
+  for (const { start, len } of segments) {
     if (len < 3) continue;
     for (let pos = 0; pos <= len - 3; pos++) {
-      const newState = [...state];
-      newState.splice(idx, 1);
-      if (pos > 0) newState.push(pos);
-      if (len - pos - 3 > 0) newState.push(len - pos - 3);
-      if (grundyMode5([...newState].sort((a, b) => a - b)) === 0) {
+      const trans = lens.slice();
+      trans.splice(segments.indexOf({ start, len }), 1);
+      const left = pos;
+      const right = len - pos - 3;
+      if (left) trans.push(left);
+      if (right) trans.push(right);
+      if (getGrundySpecial(trans) === 0) {
         return [start + pos, start + pos + 1, start + pos + 2];
       }
     }
   }
 
-  // 5. По умолчанию — первая палочка
-  if (segments.length > 0 && segments[0].len > 0) {
-    return [segments[0].start];
-  }
-
+  if (segments.length > 0) return [segments[0].start];
   return [];
 }
 
-// --- Основная функция ---
-export function getOptimalMove(mode, sticks, a, b, k) {
+// Сохраняем мемоизированные значения после каждого вызова getMoveSpecial
+const originalGetMoveSpecial = getMoveSpecial;
+getMoveSpecial = function(sticks) {
+  const result = originalGetMoveSpecial(sticks);
+  saveMem();
+  return result;
+};
+
+export function getOptimalMove(mode, sticks, a = 0, b = 0, k = 0) {
   switch (mode) {
-    case 1: return getMoveMode1(sticks, k);
-    case 2: return getMoveMode2(sticks, a, b);
-    case 3: return getMoveMode3(sticks, k);
-    case 4: return getMoveMode4(sticks, a, b);
-    case 5: return getMoveMode5(sticks);
+    case 1: return getMoveAny(sticks, 1, k);
+    case 2: return getMoveAny(sticks, a, b);
+    case 3: return getMoveConsecutive(sticks, 1, k);
+    case 4: return getMoveConsecutive(sticks, a, b);
+    case 5: return getMoveSpecial(sticks);
     default: return [];
   }
 }

@@ -1,0 +1,1 @@
+Проект собран на Electron и React. 
