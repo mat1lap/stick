@@ -1,6 +1,8 @@
 # Stick
 
 Проект собран на **Electron** и **React**.  
+Доступен по ссылке:
+https://mat1lap.github.io/stick/
 
 Чтобы собрать проект или развепнуть в браузере Вам понадобится Node.js и Git.
 
@@ -26,9 +28,6 @@
    npm run start
    ```
 3. После этого проект будет доступен по адресу [http://localhost:3000](http://localhost:3000) (по умолчанию).
-
-Также проект доступен по ссылке:
-https://mat1lap.github.io/stick/
 
 ---
 
