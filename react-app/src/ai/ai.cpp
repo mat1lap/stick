@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <random>
 #include <chrono>
+#include <iostream>
+#include <string>
 using namespace std;
 
 mt19937 rnd(chrono::steady_clock::now().time_since_epoch().count());
@@ -42,11 +44,7 @@ int getMex(set<int>& s) {
 
 vector<int> getMoveAny(vector<bool>& sticks, int a, int b) {
     int len = sticks.size();
-    int n = 0;
-    for (bool b : sticks) {
-        if (b)
-            ++n;
-    }
+    int n = count(sticks.begin(), sticks.end(), true);
 
     vector<bool> dp(n + 1, false);
     vector<double> loseMovePercentage(n + 1, 0);
@@ -67,31 +65,31 @@ vector<int> getMoveAny(vector<bool>& sticks, int a, int b) {
 
     int newN;
     if (bestMove[n].empty()) {
-        int minPercentage = n - a;
+        newN = n - a;
         for (int i = a + 1; i <= b; ++i) {
-            if (loseMovePercentage[minPercentage] > loseMovePercentage[n - i])
-                minPercentage = n - i;
+            if (loseMovePercentage[newN] > loseMovePercentage[n - i])
+                newN = n - i;
         }
-        newN = minPercentage;
     }
     else
         newN = bestMove[n][uniform_int_distribution<int>(0, bestMove[n].size() - 1)(rnd)];
 
-    vector<int> ans;
-    for (int i = 0; i < len && ans.size() < n - newN; ++i) {
+    int toRemove = n - newN;
+    vector<int> activeIndices;
+    activeIndices.reserve(toRemove);
+    for (int i = 0; i < len; ++i) {
         if (sticks[i])
-            ans.push_back(i);
+            activeIndices.push_back(i);
     }
+    shuffle(activeIndices.begin(), activeIndices.end(), rnd);
+    vector<int> ans;
+    ans.insert(ans.end(), activeIndices.begin(), activeIndices.begin() + toRemove);
     return ans;
 }
 
 vector<int> getMoveConsecutive(vector<bool>& sticks, int a, int b) {
     int len = sticks.size();
-    int n = 0;
-    for (bool b : sticks) {
-        if (b)
-            ++n;
-    }
+    int n = count(sticks.begin(), sticks.end(), true);
 
     vector<int> grundy(n + 1, 0);
     for (int i = 1; i <= n; ++i) {
@@ -128,26 +126,40 @@ vector<int> getMoveConsecutive(vector<bool>& sticks, int a, int b) {
 
     if (!bestMoves.empty())
         return bestMoves[uniform_int_distribution<int>(0, bestMoves.size() - 1)(rnd)];
-    else {
-        for (auto& seg : segments) {
-            if (seg.len >= a) {
-                bestMoves.push_back({});
-                int j = a;
-                for (int i = 0; i < j; ++i)
-                    bestMoves[0].push_back(seg.start + i);
-                return bestMoves[0];
+
+    vector<vector<int>> allMoves;
+    for (auto& seg : segments) {
+        int maxN = min(b, seg.len);
+        for (int j = a; j <= maxN; ++j) {
+            for (int pos = 0; pos + j <= seg.len; ++pos) {
+                allMoves.push_back({});
+                allMoves.back().reserve(j);
+                for (int k = 0; k < j; ++k)
+                    allMoves.back().push_back(seg.start + pos + k);
             }
         }
     }
+    if (!allMoves.empty())
+        return allMoves[uniform_int_distribution<int>(0, allMoves.size() - 1)(rnd)];
     return {};
 }
 
-static map<vector<int>, int> mem;
+static map<string, int> mem;
+string vecToKey(const vector<int>& v) {
+    string s;
+    for (size_t i = 0; i < v.size(); ++i) {
+        if (i) s += ',';
+        s += to_string(v[i]);
+    }
+    return s;
+}
+
 int getGrundySpecial(vector<int> lens) {
     sort(lens.begin(), lens.end());
+    string key = vecToKey(lens);
     int n = lens.size();
-    if (n == 0) return mem[lens] = 0;
-    if (mem.count(lens)) return mem[lens];
+    if (mem.count(key)) return mem[key];
+    if (n == 0) return mem[key] = 0;
     set<vector<int>> transitions;
 
     //1 stick
@@ -198,8 +210,8 @@ int getGrundySpecial(vector<int> lens) {
                     trans.erase(trans.begin() + j);
                     trans.erase(trans.begin() + i);
 
-                    int left1 = pos1, right1 = i - pos1 - 1;
-                    int left2 = pos2, right2 = j - pos2 - 1;
+                    int left1 = pos1, right1 = len1 - pos1 - 1;
+                    int left2 = pos2, right2 = len2 - pos2 - 1;
                     if (left1) trans.push_back(left1);
                     if (right1) trans.push_back(right1);
                     if (left2) trans.push_back(left2);
@@ -230,16 +242,18 @@ int getGrundySpecial(vector<int> lens) {
     }
 
     set<int> grundySet;
-    for (auto v : transitions)
+    for (auto& v : transitions)
         grundySet.insert(getGrundySpecial(v));
-    return mem[lens] = getMex(grundySet);
+    return mem[key] = getMex(grundySet);
 }
 
 vector<int> getMoveSpecial(vector<bool>& sticks) {
     vector<Segment> segments = getSegments(sticks);
-    vector<int> lens;
-    for (auto& seg : segments) lens.push_back(seg.len);
     int n = segments.size();
+    vector<int> lens;
+    lens.reserve(n);
+    for (auto& seg : segments) lens.push_back(seg.len);
+    vector<vector<int>> bestMoves;
 
     //1 stick
     for (int i = 0; i < n; ++i) {
@@ -253,7 +267,7 @@ vector<int> getMoveSpecial(vector<bool>& sticks) {
             if (left) trans.push_back(left);
             if (right) trans.push_back(right);
 
-            if (getGrundySpecial(trans) == 0) return { start + pos };
+            if (getGrundySpecial(trans) == 0) bestMoves.push_back({ start + pos });
         }
     }
 
@@ -275,7 +289,7 @@ vector<int> getMoveSpecial(vector<bool>& sticks) {
                 if (c) trans.push_back(c);
 
                 if (getGrundySpecial(trans) == 0)
-                    return { start + pos1, start + pos2 };
+                    bestMoves.push_back({ start + pos1, start + pos2 });
             }
         }
     }
@@ -301,7 +315,7 @@ vector<int> getMoveSpecial(vector<bool>& sticks) {
                     if (right2) trans.push_back(right2);
 
                     if (getGrundySpecial(trans) == 0)
-                        return { start1 + pos1, start2 + pos2 };
+                        bestMoves.push_back({ start1 + pos1, start2 + pos2 });
                 }
             }
         }
@@ -322,11 +336,51 @@ vector<int> getMoveSpecial(vector<bool>& sticks) {
             if (right) trans.push_back(right);
 
             if (getGrundySpecial(trans) == 0)
-                return { start + pos, start + pos + 1, start + pos + 2 };
+                bestMoves.push_back({ start + pos, start + pos + 1, start + pos + 2 });
         }
     }
-
-    if (!segments.empty()) return { segments[0].start };
+    if (!bestMoves.empty())
+        return bestMoves[uniform_int_distribution<int>(0, bestMoves.size() - 1)(rnd)];
+    
+    vector<std::vector<int>> allMoves;
+    // 1 stick
+    for (int i = 0; i < n; ++i) {
+        int start = segments[i].start;
+        int len = segments[i].len;
+        for (int pos = 0; pos < len; ++pos)
+            allMoves.push_back({ start + pos });
+    }
+    // 2 sticks in single segment
+    for (int i = 0; i < n; ++i) {
+        int start = segments[i].start;
+        int len = segments[i].len;
+        if (len < 2) continue;
+        for (int pos1 = 0; pos1 < len; ++pos1)
+            for (int pos2 = pos1 + 1; pos2 < len; ++pos2)
+                allMoves.push_back({ start + pos1, start + pos2 });
+    }
+    // 2 sticks in different
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+            int start1 = segments[i].start;
+            int len1 = segments[i].len;
+            int start2 = segments[j].start;
+            int len2 = segments[j].len;
+            for (int pos1 = 0; pos1 < len1; ++pos1)
+                for (int pos2 = 0; pos2 < len2; ++pos2)
+                    allMoves.push_back({ start1 + pos1, start2 + pos2 });
+        }
+    }
+    // 3 consecutive
+    for (int i = 0; i < n; ++i) {
+        int start = segments[i].start;
+        int len = segments[i].len;
+        if (len < 3) continue;
+        for (int pos = 0; pos <= len - 3; ++pos)
+            allMoves.push_back({ start + pos, start + pos + 1, start + pos + 2 });
+    }
+    if (!allMoves.empty())
+        return allMoves[uniform_int_distribution<int>(0, allMoves.size() - 1)(rnd)];
     return {};
 }
 
