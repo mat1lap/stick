@@ -19,15 +19,16 @@ https://mat1lap.github.io/stick/
 4. Итоговый исполняемый файл окажется в electron-app/out/electron-app-win32-x64/electron-app.exe
 
 Если хотите развернуть проект в браузере:
-1. Установите `react-router-dom`:
+1. Откройте git bash
+2. Перейдите в папку `react-app` и установите `react-router-dom`:
    ```bash
    npm install react-router-dom
    ```
-2. Перейдите в папку `react-app` и запустите:
+3. Запустите:
    ```bash
    npm run start
    ```
-3. После этого проект будет доступен по адресу [http://localhost:3000](http://localhost:3000) (по умолчанию).
+4. После этого проект будет доступен по адресу [http://localhost:3000](http://localhost:3000) (по умолчанию).
 
 ---
 
