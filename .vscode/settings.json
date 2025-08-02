@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "random": "cpp",
-        "vector": "cpp",
-        "xtree": "cpp",
-        "ios": "cpp",
-        "xiosbase": "cpp"
-    }
-}
