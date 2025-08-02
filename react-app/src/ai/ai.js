@@ -1,3 +1,5 @@
+//converted from ai.cpp
+
 const rnd = Math.random;
 
 function Segment(start, len) {
