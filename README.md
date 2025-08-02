@@ -4,10 +4,10 @@
 Доступен по ссылке:
 https://mat1lap.github.io/stick/
 
-Чтобы собрать проект или развепнуть в браузере Вам понадобится Node.js и Git.
+Чтобы собрать проект или развепнуть в браузере Вам понадобится **Node.js** и **Git**.
 
 Если хотите собрать проект:
-1. Откройте git bash
+1. Откройте **Git Bash**
 2. Перейдите в папку `electron-app` и установите `@electron-forge/cli`:
    ```bash
    npm install @electron-forge/cli
@@ -19,7 +19,7 @@ https://mat1lap.github.io/stick/
 4. Итоговый исполняемый файл окажется в electron-app/out/electron-app-win32-x64/electron-app.exe
 
 Если хотите развернуть проект в браузере:
-1. Откройте git bash
+1. Откройте **Git Bash**
 2. Перейдите в папку `react-app` и установите `react-router-dom`:
    ```bash
    npm install react-router-dom

@@ -3,31 +3,44 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
+    icon: './src/icon.ico',
     asar: true,
   },
   rebuildConfig: {},
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        icon: './src/icon',
+        setupIcon: './src/icon.ico'
+      },
     },
     {
       name: '@electron-forge/maker-zip',
+      config: {
+        icon: './src/icon.ico'
+      },
       platforms: ['darwin'],
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {},
+      config: {
+        icon: './src/icon.ico'
+      }
     },
     {
       name: '@electron-forge/maker-rpm',
-      config: {},
+      config: {
+        icon: './src/icon.ico'
+      }
     },
   ],
   plugins: [
     {
       name: '@electron-forge/plugin-auto-unpack-natives',
-      config: {},
+      config: {
+        icon: './src/icon.ico'
+      }
     },
     // Fuses are used to enable/disable various Electron functionality
     // at package time, before code signing the application
